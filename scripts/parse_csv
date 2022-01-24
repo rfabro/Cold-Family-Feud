@@ -14,18 +14,21 @@ $opt = {
 
 OptionParser.new do |opts|
   opts.banner = "Usage: parse_csv -[rfov] *.csv \n Convert csv family feud data to cold_family_feud .json"
-  opts.on('--no-fast-money', 'Should fast money rounds be generated') do 
+  opts.on('--no-fast-money', 'Should fast money rounds be generated') do
     $opt[:fastmoney] = false
   end
-  opts.on('--ignore-header', 'ignore the header on csv files') do 
+  opts.on('--ignore-header', 'ignore the header on csv files') do
     $opt[:ignore_header] = true
   end
 
-  opts.on('--no-random', 'do not suffle rounds around and go in order of reading') do 
+  opts.on('--no-random', 'do not suffle rounds around and go in order of reading') do
     $opt[:random] = false
   end
-  opts.on('--no-multiplier', 'do not create double point rounds half way through the game') do 
+  opts.on('--no-multiplier', 'do not create double point rounds half way through the game') do
     $opt[:multiplier] = false
+  end
+  opts.on('--single-file', 'output a single json file to stdout, throw errors if round numbers are off') do
+    $opt[:singlefile] = true
   end
   opts.on('-rNUM','--rounds=NUM',  Integer, 'How many rounds per a game') do |r|
     $opt[:rounds] = r
@@ -36,6 +39,10 @@ OptionParser.new do |opts|
 
   opts.on('-oTARGET','--target=FOLDER',  String, 'where to put generated files') do |f|
     $opt[:target] = f
+  end
+
+  opts.on('-cSTRING','--csv-text=CSV_TEXT',  String, 'text of csv data to parse') do |f|
+    $opt[:csv_text] = f
   end
 
   opts.on('-v', 'Verbose Mode')
@@ -49,19 +56,31 @@ csv_parser = CSVParser.new({
   ignore_header: $opt[:ignore_header],
   verbose: $opt[:v],
   filename: $opt[:filename],
+  singlefile: $opt[:singlefile],
   target: $opt[:target],
   files: ARGV
 })
 
 file_arr = csv_parser.parse
 
-ARGV.clear
-p "Continue creating files: #{$opt[:target]}#{$opt[:filename]}0-#{file_arr.length() - 1}.json ? [y/n]"
-desicion = gets.chomp
-if desicion == "y"
-  csv_parser.saveFiles(file_arr)
+if $opt[:singlefile]
+  if file_arr.length() > 1
+    STDOUT.write 'Error: this script was supposed to output only one object, but multiple objects were generated: ' + file_arr.length()
+  else
+    STDOUT.write JSON.pretty_generate(file_arr[0])
+  end
 else
-  p "Exiting..."
+  ARGV.clear
+  p "Continue creating files: #{$opt[:target]}#{$opt[:filename]}0-#{file_arr.length() - 1}.json ? [y/n]"
+  desicion = gets.chomp
+  if desicion == "y"
+    csv_parser.saveFiles(file_arr)
+  else
+    p "Exiting..."
+  end
 end
+
+
+
 
 

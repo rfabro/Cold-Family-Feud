@@ -15,7 +15,7 @@ require 'json'
 require_relative 'point_generator'
 
 class CSVParser 
-  attr_accessor :fastmoney, :rounds, :random, :multiplier, :ignore_header, :verbose, :files, :filename, :target
+  attr_accessor :fastmoney, :rounds, :random, :multiplier, :ignore_header, :verbose, :files, :filename, :target, :singlefile, :csv_text
   @@round_arr = []
   @@file_arr = []
 
@@ -24,6 +24,8 @@ class CSVParser
     @rounds = params.fetch(:rounds, 6)
     @files = params.fetch(:files, [])
     @random = params.fetch(:random, true)
+    @singlefile = params.fetch(:singlefile, false)
+    @csv_text = params.fetch(:csv_text, "")
     @multiplier = params.fetch(:multiplier, true)
     @ignore_header = params.fetch(:ignore_header, false)
     @verbose = params.fetch(:verbose, false)
@@ -33,7 +35,7 @@ class CSVParser
 
   # debug output
   def dp(output)
-    if verbose
+    if @verbose
       p output
     end
   end
@@ -89,8 +91,12 @@ class CSVParser
     fm = 0
     counter = 0
     fm_rounds = 0
+    if @singlefile
+      @rounds = @@round_arr.length()
+    end
     if @fastmoney
       fm_rounds = 4
+      @rounds = @rounds - fm_rounds
     end
 
     if @fastmoney
@@ -115,7 +121,7 @@ class CSVParser
     for r in @@round_arr
       if counter == game_num
         unless r.nil?
-          p "could not use in a full game with #{@rounds} rounds + #{fm_rounds} fast money rounds => #{r[0]}"
+          dp "could not use in a full game with #{@rounds} rounds + #{fm_rounds} fast money rounds => #{r[0]}"
         end
         next
       end
