@@ -26,7 +26,7 @@
     "ws": "^7.4.1"
   },
   "scripts": {
-    "dev": "node server.js",
+    "dev": "npx nodemon server.js",
     "build": "next build",
     "dockerbuild": "docker build . -t friendlyfeud:latest",
     "start": "NODE_ENV=production node server.js",
@@ -34,6 +34,7 @@
     "parse-locales": "i18next-scanner --config ./i18n/i18next-scanner.config.js"
   },
   "devDependencies": {
-    "i18next-scanner": "^3.0.0"
+    "i18next-scanner": "^3.0.0",
+    "nodemon": "^2.0.15"
   }
 }
