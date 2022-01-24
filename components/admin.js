@@ -313,11 +313,12 @@ export default function Admin(props) {
                   <input
                     class="hidden"
                     type="file"
-                    accept=".json"
+                    accept=".json,.csv"
                     id="gamePicker"
                     onChange={(e) => {
                       var file = document.getElementById("gamePicker").files[0];
                       console.debug(file);
+                      console.log(file);
                       if (file) {
                         var reader = new FileReader();
                         reader.readAsText(file, "utf-8");

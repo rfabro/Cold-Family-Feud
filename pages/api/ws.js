@@ -2,12 +2,54 @@ const WebSocket = require("ws");
 const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
 const glob = require("glob");
+const { promisify } = require("util");
 
 const ioHandler = (req, res) => {
   if (!res.socket.server.ws) {
     console.log("*First use, starting websockets");
 
     const wss = new WebSocket.Server({ server: res.socket.server });
+
+    /**
+     * execute ruby script to parse a csv string to json
+     * return json game data
+     * output error if parsing fails
+     */
+    async function parseCsv(message) {
+      // Exec output contains both stderr and stdout outputs
+      let json_output = await exec(
+        `./scripts/parse_csv ${message.nofast ? "--no-fast-money" : ""} \
+        --singlefile \
+        --csv-text='${message.csv}'`
+      );
+      try {
+        let new_game = JSON.parse(json_output.stdout.trim());
+        return new_game;
+      } catch (ex) {
+        return {
+          error: true,
+          message: json_output.stdout.trim() + ex,
+        };
+      }
+    }
+
+    /*
+     * reset game in memory with new values
+     */
+    function defaultGame(game, data) {
+      game.teams[0].points = 0;
+      game.teams[1].points = 0;
+      game.round = 0;
+      game.title = true;
+      game.rounds = data.rounds;
+      // clone the final round so we can store data about the second final round
+      game.final_round = data.final_round;
+      game.final_round_2 = data.final_round;
+      game.gameCopy = [];
+      game.final_round_timers = data.final_round_timers;
+      game.point_tracker = new Array(data.rounds.length).fill(0);
+      game.tick = new Date().getTime();
+    }
 
     function makeRoom(length = 4) {
       var result = [];
@@ -159,27 +201,32 @@ const ioHandler = (req, res) => {
               let data = fs.readFileSync(
                 `games/${message.lang}/${message.file}`
               );
-              let loaded = data.toString();
-              message.data = JSON.parse(loaded);
+              let loaded = JSON.parse(data.toString());
+              let game = rooms[message.room].game;
+              defaultGame(game, loaded);
+              wss.broadcast(
+                message.room,
+                JSON.stringify({ action: "data", data: game })
+              );
+            } else {
+              JSON.stringify({
+                action: "error",
+                message: "error loading file",
+              });
             }
-
+          } else if (message.action === "load_game_csv") {
+            config.debug("loading game from csv...");
             let game = rooms[message.room].game;
-            game.teams[0].points = 0;
-            game.teams[1].points = 0;
-            game.round = 0;
-            game.title = true;
-            game.rounds = message.data.rounds;
-            // clone the final round so we can store data about the second final round
-            game.final_round = message.data.final_round;
-            game.final_round_2 = message.data.final_round;
-            game.gameCopy = [];
-            game.final_round_timers = message.data.final_round_timers;
-            game.point_tracker = new Array(message.data.rounds.length).fill(0);
-            game.tick = new Date().getTime();
-            wss.broadcast(
-              message.room,
-              JSON.stringify({ action: "data", data: game })
-            );
+            let data = parseCsv(message);
+            if (!data.error) {
+              defaultGame(game, data);
+              wss.broadcast(
+                message.room,
+                JSON.stringify({ action: "data", data: game })
+              );
+            } else {
+              JSON.stringify({ action: "error", message: data.message });
+            }
           } else if (message.action === "host_room") {
             // loop until we find an available room code
             let roomCode = makeRoom();
