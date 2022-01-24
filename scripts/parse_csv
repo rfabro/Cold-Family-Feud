@@ -58,6 +58,7 @@ csv_parser = CSVParser.new({
   filename: $opt[:filename],
   singlefile: $opt[:singlefile],
   target: $opt[:target],
+  csv_text: $opt[:csv_text],
   files: ARGV
 })
 

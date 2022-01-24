@@ -2,7 +2,7 @@
 
 # CSV family feud parse
 # expects:
-# Question, answer1, pnt1, answer2, pnt2   
+# Question, answer1, pnt1, answer2, pnt2
 # or
 # Question, answer1, answer2  <-- in point_generator mode
 
@@ -14,7 +14,7 @@ require 'csv'
 require 'json'
 require_relative 'point_generator'
 
-class CSVParser 
+class CSVParser
   attr_accessor :fastmoney, :rounds, :random, :multiplier, :ignore_header, :verbose, :files, :filename, :target, :singlefile, :csv_text
   @@round_arr = []
   @@file_arr = []
@@ -31,6 +31,7 @@ class CSVParser
     @verbose = params.fetch(:verbose, false)
     @filename = params.fetch(:filename, "game_")
     @target = params.fetch(:target, "./")
+    @csv_text = params.fetch(:csv_text, "")
   end
 
   # debug output
@@ -63,13 +64,13 @@ class CSVParser
   def propagate_rounds(round)
     i = 0
     case round
-      in [String, String, Integer, *]
+    in [String, String, Integer, *]
       # "Question, Answer, Points"
       @@round_arr.push(round)
-      in [String, Integer, Integer, *]
+    in [String, Integer, Integer, *]
       # "Question, Answer, Points - Answer is integer"
       @@round_arr.push(round)
-      in [String, String, String, *]
+    in [String, String, String, *]
       # "Question, Answer, Answer"
       new_round = attach_points(round)
       @@round_arr.push(round)
@@ -78,7 +79,7 @@ class CSVParser
     end
   end
 
-  # after gathering up rows 
+  # after gathering up rows
   # create games using cold family feud format
   #
   # using round number + fast money (4 questions)
@@ -91,12 +92,21 @@ class CSVParser
     fm = 0
     counter = 0
     fm_rounds = 0
-    if @singlefile
-      @rounds = @@round_arr.length()
-    end
     if @fastmoney
       fm_rounds = 4
-      @rounds = @rounds - fm_rounds
+    end
+    if @singlefile
+      @rounds = @@round_arr.length()
+      if @rounds > 4
+        if @fastmoney
+          @rounds = @rounds - fm_rounds
+        end
+      else
+        # saftey measure incase rounds are smaller than 
+        # 4 fast money rounds
+        fm_rounds = 0
+        @fastmoney = false
+      end
     end
 
     if @fastmoney
@@ -117,7 +127,11 @@ class CSVParser
 
     game_num = ( @@round_arr.length() / (@rounds + fm_rounds) )
     game_num.to_i
+    if @singlefile
+      game_num = 1
+    end
 
+    dp "--> #{@@round_arr}"
     for r in @@round_arr
       if counter == game_num
         unless r.nil?
@@ -143,7 +157,7 @@ class CSVParser
 
           if i % 2 == 0
             round_hash[:answers].push({
-              "ans": r[i-1], "pnt": r[i], "trig": false 
+              "ans": r[i-1], "pnt": r[i], "trig": false
             })
           end
 
@@ -188,7 +202,7 @@ class CSVParser
         counter += 1
         dp "#{@@file_arr.length()}"
 
-        # clear game 
+        # clear game
         if @fastmoney
           game = {
             rounds: [],
@@ -220,10 +234,8 @@ def saveFiles(file_arr)
   end
 end
 
-def parse
-  for file in files
-    if file.include? ".csv"
-      arr_of_rows = CSV.read(file, converters: :all)
+  def parse
+    def load(arr_of_rows)
       $j = 0
       until $j > arr_of_rows.length()
         if ignore_header and $j == 0
@@ -240,12 +252,23 @@ def parse
         end
         $j +=1;
       end
-    else
-      raise "#{file} is not a .csv file"
     end
-  end
-  createFamilyJson()
-  return @@file_arr
-end
-end
 
+    if @csv_text != "" and @csv_text != nil
+      arr_of_rows = CSV.parse(@csv_text, row_sep: "\\n" ,converters: :all)
+      load(arr_of_rows)
+    else
+      # Read lots of files
+      for file in files
+        if file.include? ".csv"
+          arr_of_rows = CSV.read(file, converters: :all)
+          load(arr_of_rows)
+        else
+          raise "#{file} is not a .csv file"
+        end
+      end
+    end
+    createFamilyJson()
+    return @@file_arr
+  end
+end
