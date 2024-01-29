@@ -17,6 +17,10 @@ export default function Buzzer(props) {
   const [buzzerReg, setBuzzerReg] = useState(null);
   const [error, setErrorVal] = useState("");
   const [timer, setTimer] = useState(0);
+  const sound_buzz = new Audio("strikeoff.mp3");
+  const play_sound_buzz = () => {
+    sound_buzz.play()
+  };
   let refreshCounter = 0;
 
   function setError(e) {
@@ -93,6 +97,7 @@ export default function Buzzer(props) {
         props.setGame(json.data);
       } else if (json.action === "buzzed") {
         setBuzzed(true);
+        play_sound_buzz();
       } else if (json.action === "clearbuzzers") {
         setBuzzed(false);
       } else if (json.action === "change_lang") {

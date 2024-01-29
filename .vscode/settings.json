@@ -1,0 +1,8 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/19d8e4ff-e05b-411c-95c3-addecb7e6e76/resourceGroups/homelab/providers/Microsoft.Web/sites/doxa-family-feud",
+    "appService.deploySubpath": ".",
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ]
+}
